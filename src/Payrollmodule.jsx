@@ -1,8 +1,10 @@
+// PayrollModule.jsx
 import React, { useState } from 'react';
 import './PayrollModule.css';
+import SalarySlipModal from './SalarySlipModal'; // Import the modal component
 
 const PayrollModule = () => {
-  const [employees] = useState([
+  const [employees, setEmployees] = useState([ // Change to setEmployees for state updates
     { 
       id: 1, 
       name: 'Rajesh Kumar', 
@@ -55,6 +57,8 @@ const PayrollModule = () => {
 
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [viewingEmployee, setViewingEmployee] = useState(null); // NEW: State for modal
+  const [isSlipModalOpen, setIsSlipModalOpen] = useState(false); // NEW: Modal visibility state
   const [formData, setFormData] = useState({
     basicSalary: '',
     allowances: '',
@@ -66,7 +70,17 @@ const PayrollModule = () => {
 
   // Process payroll
   const processPayroll = () => {
-    alert('Payroll processing started for all pending employees!');
+    // Update all pending employees to paid
+    setEmployees(employees.map(emp => 
+      emp.status === 'pending' || emp.status === 'processing'
+        ? { 
+            ...emp, 
+            status: 'paid', 
+            paymentDate: new Date().toLocaleDateString('en-IN') 
+          }
+        : emp
+    ));
+    alert('Payroll processing completed for all pending employees!');
   };
 
   // Calculate salary
@@ -75,6 +89,43 @@ const PayrollModule = () => {
     const allowances = parseFloat(formData.allowances) || 0;
     const deductions = parseFloat(formData.deductions) || 0;
     return basic + allowances - deductions;
+  };
+
+  // NEW: Handle viewing salary slip
+  const handleViewSlip = (employee, e) => {
+    e.stopPropagation(); // Prevent row selection
+    setViewingEmployee(employee);
+    setIsSlipModalOpen(true);
+  };
+
+  // NEW: Handle paying individual employee
+  const handlePayNow = (employeeId, e) => {
+    e.stopPropagation(); // Prevent row selection
+    setEmployees(employees.map(emp => 
+      emp.id === employeeId 
+        ? { 
+            ...emp, 
+            status: 'paid', 
+            paymentDate: new Date().toLocaleDateString('en-IN') 
+          }
+        : emp
+    ));
+    alert('Payment processed successfully!');
+  };
+
+  // NEW: Download payslips
+  const handleDownloadPayslips = () => {
+    const paidEmployees = employees.filter(emp => emp.status === 'paid');
+    if (paidEmployees.length === 0) {
+      alert('No paid employees found to download payslips.');
+      return;
+    }
+    alert(`Downloading payslips for ${paidEmployees.length} employee(s)...`);
+  };
+
+  // NEW: Email payslips
+  const handleEmailPayslips = () => {
+    alert('Sending email notifications to all employees...');
   };
 
   return (
@@ -228,9 +279,19 @@ const PayrollModule = () => {
                 <td>{employee.paymentDate}</td>
                 <td>
                   {employee.status !== 'paid' ? (
-                    <button className="btn-pay">💳 Pay Now</button>
+                    <button 
+                      className="btn-pay"
+                      onClick={(e) => handlePayNow(employee.id, e)}
+                    >
+                      💳 Pay Now
+                    </button>
                   ) : (
-                    <button className="btn-view">📄 View Slip</button>
+                    <button 
+                      className="btn-view"
+                      onClick={(e) => handleViewSlip(employee, e)}
+                    >
+                      📄 View Slip
+                    </button>
                   )}
                 </td>
               </tr>
@@ -257,10 +318,21 @@ const PayrollModule = () => {
           </div>
         </div>
         <div className="summary-actions">
-          <button className="btn btn-primary">📥 Download Payslips</button>
-          <button className="btn btn-secondary">📧 Email to All</button>
+          <button className="btn btn-primary" onClick={handleDownloadPayslips}>
+            📥 Download Payslips
+          </button>
+          <button className="btn btn-secondary" onClick={handleEmailPayslips}>
+            📧 Email to All
+          </button>
         </div>
       </div>
+
+      {/* Salary Slip Modal */}
+      <SalarySlipModal
+        employee={viewingEmployee}
+        isOpen={isSlipModalOpen}
+        onClose={() => setIsSlipModalOpen(false)}
+      />
     </div>
   );
 };
